@@ -74,3 +74,12 @@ npm run build
 ```
 
 [deeplearn]: https://github.com/PAIR-code/deeplearnjs
+
+ISSUES:
+
+​	related caffe_branch has implemented *EltWise* *Normalize* *PriorBox* and other layer…
+
+To be continue...
+
+**PriorBox**
+

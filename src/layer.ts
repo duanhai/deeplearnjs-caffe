@@ -1,14 +1,14 @@
-import {caffe} from 'caffe-proto';
-import {Array1D, Array3D, Array4D, NDArray, NDArrayMath} from 'deeplearn';
+import { caffe } from 'caffe-proto';
+import { Array1D, Array3D, Array4D, NDArray, NDArrayMath, Scalar } from 'deeplearn';
 
 // tslint:disable-next-line:max-line-length
 export function getLayersFromModel(model: caffe.NetParameter):
-    caffe.IV0LayerParameter[]|caffe.IV1LayerParameter[] {
+  caffe.IV0LayerParameter[] | caffe.IV1LayerParameter[] {
   return model.layer.length > 0 ? model.layer as caffe.IV0LayerParameter[] :
-                                  model.layers as caffe.IV1LayerParameter[];
+    model.layers as caffe.IV1LayerParameter[];
 }
 
-function getNumericParam(param: number|number[], defaultValue: number) {
+function getNumericParam(param: number | number[], defaultValue: number) {
   const p = Array.isArray(param) ? param[0] : param;
   return p || defaultValue;
 }
@@ -19,8 +19,8 @@ function isDefined(val: any) {
 }
 
 function get1or2dParam(
-    param: number|number[], paramW: number, paramH: number,
-    defaultValue: number): number|[number, number] {
+  param: number | number[], paramW: number, paramH: number,
+  defaultValue: number): number | [number, number] {
   if (isDefined(param)) {
     return param as [number, number];
   } else if (isDefined(paramW) && isDefined(paramH)) {
@@ -34,15 +34,15 @@ function get1or2dParam(
   return get1or2dParam(param.stride, param.strideW, param.strideH, 1);
 } */
 
-function getPoolStride(param: caffe.PoolingParameter): number|[number, number] {
+function getPoolStride(param: caffe.PoolingParameter): number | [number, number] {
   return get1or2dParam(param.stride, param.strideW, param.strideH, 1);
 }
 
-function getPoolKernel(param: caffe.PoolingParameter): number|[number, number] {
+function getPoolKernel(param: caffe.PoolingParameter): number | [number, number] {
   return get1or2dParam(param.kernelSize, param.kernelW, param.kernelH, 1);
 }
 
-function getPoolType(poolType: string|number): number {
+function getPoolType(poolType: string | number): number {
   if (typeof poolType === 'number') {
     return poolType;
   } else {
@@ -58,8 +58,8 @@ function getPoolType(poolType: string|number): number {
 }
 
 export function performMathOp(
-    math: NDArrayMath, input: NDArray|NDArray[], layer: caffe.ILayerParameter,
-    blobs?: NDArray[]): NDArray {
+  math: NDArrayMath, input: NDArray | NDArray[], layer: caffe.ILayerParameter,
+  blobs?: NDArray[]): NDArray {
   switch (layer.type.toLowerCase()) {
     case 'input':
     case 'dropout':
@@ -69,7 +69,7 @@ export function performMathOp(
     case 'innerproduct':
     case 'inner_product': {
       const innerProductParam =
-          caffe.InnerProductParameter.create(layer.innerProductParam);
+        caffe.InnerProductParameter.create(layer.innerProductParam);
       const weights = blobs[0] as Array3D;
       const x = (input as Array3D).as1D();
       // const W = weights.as2D(innerProductParam.numOutput, x.shape[0]);
@@ -86,7 +86,7 @@ export function performMathOp(
     case 'conv':
     case 'convolution': {
       const convolutionParam =
-          caffe.ConvolutionParameter.create(layer.convolutionParam);
+        caffe.ConvolutionParameter.create(layer.convolutionParam);
       const stride = getNumericParam(convolutionParam.stride, 1);
 
       // TODO throw error if pad is number[] or padW and padH
@@ -97,11 +97,11 @@ export function performMathOp(
       // kernelSize is estimated from weights implicitly
       const weights = blobs[0] as Array4D;
       const bias = convolutionParam.biasTerm !== false ?
-          blobs[1].as1D() as Array1D :
-          null;
+        blobs[1].as1D() as Array1D :
+        null;
 
       return math.conv2d(
-          input as Array3D, weights, bias, stride, pad, dimRoundingMode);
+        input as Array3D, weights, bias, stride, pad, dimRoundingMode);
     }
 
     case 'pool':
@@ -122,16 +122,16 @@ export function performMathOp(
       switch (getPoolType(poolingParam.pool)) {
         case caffe.PoolingParameter.PoolMethod.MAX:
           return math.maxPool(
-              input as Array3D, kernelSize, stride, pad, dimRoundingMode);
+            input as Array3D, kernelSize, stride, pad, dimRoundingMode);
 
         case caffe.PoolingParameter.PoolMethod.AVE:
           return math.avgPool(
-              input as Array3D<'float32'>, kernelSize, stride, pad,
-              dimRoundingMode);
+            input as Array3D<'float32'>, kernelSize, stride, pad,
+            dimRoundingMode);
 
         default:
           throw TypeError(
-              `Pooling type ${poolingParam.pool} is not implemented`);
+            `Pooling type ${poolingParam.pool} is not implemented`);
       }
     }
 
@@ -152,12 +152,12 @@ export function performMathOp(
       const alpha = lrnParam.alpha / lrnParam.localSize || 1;
       const beta = lrnParam.beta || 0.75;
       const normRegion =
-          lrnParam.normRegion === caffe.LRNParameter.NormRegion.WITHIN_CHANNEL ?
+        lrnParam.normRegion === caffe.LRNParameter.NormRegion.WITHIN_CHANNEL ?
           'withinChannel' :
           'acrossChannels';
 
       return math.localResponseNormalization3D(
-          input as Array3D, radius, bias, alpha, beta, normRegion);
+        input as Array3D, radius, bias, alpha, beta, normRegion);
     }
 
     case 'scale': {
@@ -197,6 +197,21 @@ export function performMathOp(
         out = math.concat3D(out, inp[i], 2);
       }
       return out;
+    }
+
+    case 'eltwise': {
+      const inp = input as Array3D[];
+      var i1 = inp[0];
+      var i2 = inp[1];
+      return math.add(i1, i2);
+    }
+
+    case 'normalize': {
+      const timeScalar = Scalar.new(1 / 20);
+      var inp = input as Array3D;
+      var imgT = math.cast(inp, "float32");
+      return math.multiply(imgT, timeScalar);
+
     }
 
     default:
