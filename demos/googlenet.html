@@ -15,14 +15,14 @@
   // Caffemodel needs to be downloaded from here
   var modelUrl = 'http://dl.caffe.berkeleyvision.org';
 
-  var prototxtUrl = GITHUB_CDN + 'BVLC/caffe/master/models/bvlc_googlenet/deploy.prototxt';
-  var caffemodelUrl = MODEL_DIR + 'bvlc_googlenet.caffemodel';
+  var prototxtUrl = MODEL_DIR + 'deploy.prototxt';
+  var caffemodelUrl = MODEL_DIR + 'res10_512_ft2_iter_75000.caffemodel';
 
   // Initialize the CaffeModel
   var model = new deeplearnCaffe.CaffeModel(caffemodelUrl, prototxtUrl);
 
   var untilLayer = undefined;   // forward pass until this layer
-  var imageUrl = 'img/cat.jpg'; // use this image for classification
+  var imageUrl = 'img/test.JPG'; // use this image for classification
 
   // In case you want to force CPU or GPU mode
   // dl.ENV.setMath(new dl.NDArrayMath('cpu', false));
